@@ -28,6 +28,7 @@ type Config struct {
 	Port     int    `json "port"`
 	Login    string `json "login"`
 	Password string `json "password"`
+	Online   bool   `json "online"`
 }
 
 // Функция для переподключения в случае ошибок
@@ -45,22 +46,29 @@ func tryJoin() {
 
 func main() {
 	// Чтение файла конфигурации для входа на сервер и лицензионный аккаунт
-	file, _ := ioutil.ReadFile("config.json")
+	file, err := ioutil.ReadFile("config.json")
+	if err != nil {
+		log.Fatal(err)
+	}
 	// Парсинг
-	err := json.Unmarshal(file, &data)
+	err = json.Unmarshal(file, &data)
 	// Проверка на ошибки
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Готовый код для авторизации лицензионного аккаунта
-	auth, err := yggdrasil.Authenticate(data.Login, data.Password)
-	if err != nil {
-		log.Fatal(err)
+	if data.Online {
+		// Готовый код для авторизации лицензионного аккаунта
+		auth, err := yggdrasil.Authenticate(data.Login, data.Password)
+		if err != nil {
+			log.Fatal(err)
+		}
+		client.Auth.UUID, client.Name = auth.SelectedProfile()
+		client.AsTk = auth.AccessToken()
+	} else {
+		// Просто применяем для оффлайна ник
+		client.Name = data.Login
 	}
-	client.Auth.UUID, client.Name = auth.SelectedProfile()
-	client.AsTk = auth.AccessToken()
-
 	// Присоединяемся на сервер
 	tryJoin()
 	log.Println("Присоединение успешно")
